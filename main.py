@@ -1,7 +1,7 @@
 import os
-
 import numpy as np
 from termcolor import colored
+import time
 
 import torch
 import torchvision
@@ -15,7 +15,9 @@ from sklearn.metrics import confusion_matrix, roc_auc_score
 from data_loader import sampleBatches, sampleBatchesEvaluation, dataset_processing
 from models import getModel
 
+import inquirer
 import cv2
+import sys
 
 AUTHENTIC_DIR = "/hadatasets/gabriel_bertocco/ForensicsDatasets/CASIA2.0/CASIA2.0_revised/Au"
 TAMPERED_DIR = "/hadatasets/gabriel_bertocco/ForensicsDatasets/CASIA2.0/CASIA2.0_revised/Tp"
@@ -23,19 +25,27 @@ TAMPERED_DIR = "/hadatasets/gabriel_bertocco/ForensicsDatasets/CASIA2.0/CASIA2.0
 np.random.seed(12)
 
 def main():
+	# Retrieving params such as model and available GPUs 
+	params = choose_launch_parameters()
+	model_name = params["model"]
+	gpu_ids = params['gpus']
+	gpu_ids = ','.join(map(str, gpu_ids))
 
 	# Setting the GPU
-	gpu_ids = "6,7"
-	os.environ["CUDA_VISIBLE_DEVICES"] = gpu_ids
 	os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+	os.environ["CUDA_VISIBLE_DEVICES"] = gpu_ids
 
 	num_gpus = torch.cuda.device_count()
-	print("Num GPU's:", num_gpus)
-
 	gpu_indexes = np.arange(num_gpus).tolist()
-	#gpu_indexes = np.array(list(map(int, gpu_ids.split(","))))
-	print("Allocated GPU's for model:", gpu_indexes)
 
+
+	print("\n---Launching parameters---")
+	print("Allocated GPU(s) for model:", num_gpus)
+	print("Forensic detection model:", model_name)
+	input("\nPress [ENTER] to confirm...")
+	print("---Execution---")
+
+	'''
 	img_height = 512
 	img_width = 512
 	quality = 90
@@ -56,10 +66,11 @@ def main():
 	val_sampler = sampleBatchesEvaluation(val_images_paths, img_height, img_width, quality)
 	valLoader = DataLoader(val_sampler, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=False, drop_last=False, collate_fn=collate_samples)
 
+	
 	# Some visualizations of images and their respective ELA images
-	'''
 	img_path = "/hadatasets/gabriel_bertocco/ForensicsDatasets/CASIA2.0/CASIA2.0_revised/Au/Au_arc_30714.jpg"
 	save_original_and_ela_images(img_path, val_sampler)
+	
 
 	img_path = "/hadatasets/gabriel_bertocco/ForensicsDatasets/CASIA2.0/CASIA2.0_revised/Au/Au_nat_30090.jpg"
 	save_original_and_ela_images(img_path, val_sampler)
@@ -72,21 +83,20 @@ def main():
 	save_original_and_ela_images(img_path, val_sampler)
 	plot_forgery_formation(img_path)
 	'''
+	
+	#Loading Model
+	model = getModel(gpu_indexes, model_name)
 
-	# Loading model
-	#model = getModel(gpu_indexes, "resnet18")
-	model = getModel(gpu_indexes, "resnet152")
+	#Put the model into training mode
 	model.train()
 
 	#bce_loss = BCELoss(reduction='mean')
 	ce_loss = CrossEntropyLoss(reduction='mean')
 	optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-4)
 
-	num_epochs = 300
+	num_epochs = 5
 	best_acc_bal = 0.0
-
 	for epoch_counter in range(num_epochs):
-
 		batch_counter = 0
 		for batch_images, batch_labels in trainLoader:
 			batch_images = batch_images.cuda(gpu_indexes[0])
@@ -146,7 +156,6 @@ def main():
 
 		model.train()
 
-
 	# Evaluation on test set
 	print("Evaluating best checkpoint in test set ...")
 
@@ -178,6 +187,77 @@ def main():
 	TNR, TPR, FPR, FNR, acc_bal = calculate_balanced_accuracy_and_auc(test_predictions, test_labels)
 	print(colored("Epoch: {}/{}, TPR: {:.2%}, TNR: {:.2%}, ACC_BAL: {:.2%}".format(epoch_counter, num_epochs, TPR, TNR, acc_bal), 'cyan'))
 
+def choose_launch_parameters():
+
+	params = {}
+	# List of valid models
+	valid_models = ['resnet18', 'resnet152', 'splicebuster', 'trufor']
+
+	# Check if a model is provided as a command-line argument and is valid, or if an env variable is set
+	if len(sys.argv) > 1 and sys.argv[1] in valid_models:
+		model = sys.argv[1]
+	else:
+		model = os.environ.get("FORENSIC_DETECTION_MODEL", "")
+
+	if model in valid_models:
+		print("Model found:", model)
+	else:
+		print("No valid model found.")
+
+		# Choose the FDM
+		model_prompt = [
+			inquirer.List('model',
+						message="Please choose the forensic detection model to use",
+						choices=valid_models,
+						default='resnet18'),  # Note: 'default' should be one of the 'choices'
+		]
+
+		model = inquirer.prompt(model_prompt)["model"]
+		print("Selected model:", model)
+
+		# Set the model for future use, if needed
+		os.environ["FORENSIC_DETECTION_MODEL"] = model
+
+	params['model'] = model
+
+	# Define a list of 10 GPUs (from 0 to 9)
+	available_gpus = [str(i) for i in range(10)]  # Always display a list of 10 GPUs
+
+	# Check if GPU indices are provided as a command-line argument
+	if len(sys.argv) > 2:
+		input_gpus = sys.argv[2]
+		gpu_list = [gpu for gpu in input_gpus.split(',') if gpu in available_gpus]
+	else:
+		gpu_list = []
+
+	if gpu_list:
+		print("GPUs selected:", gpu_list)
+	else:
+		print("No GPU selected.")
+		# Choose the GPUs, always displaying options for 10 GPUs 
+		# (using conda command before defining CUDA_VISIBLE_DEVICES makes this env variable useless)
+
+		if model == 'trufor':
+			gpu_prompt = [
+				inquirer.List('gpus',
+							   message="Please choose the GPU indices to use (0-9)",
+							   choices=available_gpus,
+							   default=available_gpus[0]),  # Default to the first GPU
+			]
+		else:
+			gpu_prompt = [
+				inquirer.Checkbox('gpus',
+								  message="Please choose the GPU indices to use (0-9)",
+								  choices=available_gpus,
+								  default=available_gpus[0]),  # Default to the first GPU
+			]
+		gpu_indices = inquirer.prompt(gpu_prompt)['gpus']
+		gpu_list = [str(i) for i in gpu_indices]  # Convert back to strings if needed
+
+	params['gpus'] = gpu_list
+	return params
+
+
 
 def save_original_and_ela_images(img_path, val_sampler):
 
@@ -204,11 +284,9 @@ def plot_forgery_formation(img_forgery_path):
 
 	full_img01_path = os.path.join(AUTHENTIC_DIR, img_name01)
 	full_img02_path = os.path.join(AUTHENTIC_DIR, img_name02)
-
+ 
 	print("Source image path: %s" % full_img01_path)
 	print("Target image path: %s" % full_img02_path)
-
-
 
 
 def calculate_balanced_accuracy_and_auc(preds, labels, threshold=0.5):
