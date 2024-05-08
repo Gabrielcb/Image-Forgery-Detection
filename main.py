@@ -326,7 +326,6 @@ def collate_samples(batch):
 
 	return images, labels
 
-
-
 if __name__ == '__main__':
 	main()
+	

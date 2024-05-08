@@ -18,7 +18,7 @@ from scipy.signal import correlate2d
 my_round = lambda x: np.sign(x) * np.floor(np.abs(x)+0.5)
 
 def quantizerScalarEncoder(x, values):
-    y = np.zeros(x.shape, dtype = np.int64)
+    y = np.zeros(x.shape, dtype = int64)
     th = (values[1:]+values[:-1]) / 2
     for index in range(th.size):
         y += x>th[index]
@@ -29,7 +29,7 @@ def getParams(ordResid, symTranspose, q, T, ordCooc, mapper, strides):
     radius = (np.asarray(Wres.shape[0:2]) - 1) / 2
 
     n = 2*T + 1
-    values = (float(q) * Fres / 256.0) * np.asarray(range(-T,T+1)).astype(np.float)
+    values = (float(q) * Fres / 256.0) * np.asarray(range(-T,T+1)).astype(float)
 
     radius = radius + (ordCooc - (ordCooc % 2)) / 2
     radius = radius.astype(int)
@@ -102,8 +102,8 @@ def computeSpam(X, params, weights = list(),  normalize = True):
         n = values.size
         T = (n - 1) / 2
         q = (values[1] - values[0])
-        resHq = (np.clip(my_round(resH / q) + T, 0, n - 1)).astype(np.int64)
-        resVq = (np.clip(my_round(resV / q) + T, 0, n - 1)).astype(np.int64)
+        resHq = (np.clip(my_round(resH / q) + T, 0, n - 1)).astype(int64)
+        resVq = (np.clip(my_round(resV / q) + T, 0, n - 1)).astype(int64)
     else:
         resHq = quantizerScalarEncoder(resH, values)
         resVq = quantizerScalarEncoder(resV, values)
@@ -115,10 +115,10 @@ def computeSpam(X, params, weights = list(),  normalize = True):
     indexL = int((dim - 1) / 2)
 
     shapeR = np.asarray(resHq.shape[:2]) - dim + 1
-    resHh = np.zeros(shapeR, dtype = np.int)
-    resVh = np.zeros(shapeR, dtype = np.int)
-    resHv = np.zeros(shapeR, dtype = np.int)
-    resVv = np.zeros(shapeR, dtype = np.int)
+    resHh = np.zeros(shapeR, dtype = int)
+    resVh = np.zeros(shapeR, dtype = int)
+    resHv = np.zeros(shapeR, dtype = int)
+    resVv = np.zeros(shapeR, dtype = int)
 
     for indexP in range(ordCooc):
         nn = (n ** indexP)

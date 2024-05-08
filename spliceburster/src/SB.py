@@ -160,8 +160,8 @@ def SBsup(img, msk, paramSpam = defaultSpamParam, ksize = 128,  extFeat = range(
     spam, weights, range0, range1 = getSpam(img, paramSpam, ksize, paddingModality = paddingModality)
     spam = np.sqrt(spam)
 
-    msk = msk[range0.astype(np.int), :]
-    msk = msk[:, range1.astype(np.int)]
+    msk = msk[range0.astype(int), :]
+    msk = msk[:, range1.astype(int)]
 
     shape_spam = spam.shape
     list_spam  = spam.reshape([shape_spam[0]*shape_spam[1],shape_spam[2]])

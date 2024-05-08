@@ -7,3 +7,12 @@ assets/results/npz/*
 assets/input_stock/*
 assets/input_images/*
 trufor/code/weights/*
+Interface/E2E/test/*
+Interface/E2E/models/E2E/N/last_model.th
+Interface/E2E/models/E2E/RGB/last_model.th
+Interface/E2E/models/E2E/RGN/last_model.th
+Interface/trufor.pth.tar
+__pycache__
+.venv
+trufor/code/images/*
+spliceburster/test/*

@@ -34,7 +34,7 @@ _C.MODEL.NAME = 'detconfcmx'
 _C.MODEL.PRETRAINED = ''
 _C.MODEL.MODS = ('RGB','NP++')
 _C.MODEL.EXTRA = CN(new_allowed=True)
-_C.MODEL.EXTRA.DETECTION = None
+_C.MODEL.EXTRA.DETECTION = ""
 _C.MODEL.EXTRA.CONF = False
 
 # Dataset parameters
@@ -47,7 +47,6 @@ _C.DATASET.NUM_CLASSES = 2
 # Testing parameters
 _C.TEST = CN()
 _C.TEST.MODEL_FILE = ''
-
 
 def update_config(cfg, args):
     cfg.defrost()

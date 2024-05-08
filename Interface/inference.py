@@ -30,6 +30,12 @@ from models.cmx.builder_np_conf import myEncoderDecoder as confcmx
 
 from collections import OrderedDict
 
+import e2e_parameters as parameters
+from E2E.E2E.dataloaders.data_loader import loader
+from E2E.E2E.detection import detection
+from sklearn import metrics
+
+
 AUTHENTIC_DIR = "/hadatasets/gabriel_bertocco/ForensicsDatasets/CASIA2.0/CASIA2.0_revised/Au"
 TAMPERED_DIR = "/hadatasets/gabriel_bertocco/ForensicsDatasets/CASIA2.0/CASIA2.0_revised/Tp"
 GT_DIR = "/hadatasets/gabriel_bertocco/ForensicsDatasets/CASIA2.0/CASIA2.0_Groundtruth"
@@ -53,6 +59,7 @@ class forgery_detector():
 		self.device = device
 		
 		# Recod.ai model
+		print("=> loading Recod.ai best checkpoint")
 		self.model = self.load_model()
 		#resnet_dict = torch.load(os.path.join(os.path.dirname(__file__), "best_checkpoint_90.h5"), map_location=torch.device('cpu'))
 		resnet_dict = torch.load(os.path.join(os.path.dirname(__file__), "best_checkpoint.h5"), map_location=device)
@@ -67,7 +74,7 @@ class forgery_detector():
 		config.defrost()
 		config.merge_from_file(f'trufor.yaml')
 		config.freeze()
-		print(config)
+		#print(config)
 		self.trufor_model = confcmx(cfg=config)
 
 		model_state_file = "trufor.pth.tar"
@@ -78,16 +85,24 @@ class forgery_detector():
 		self.trufor_model.eval()
 		
 		# E2E model
-
+		# Load config from parameters.py
 		
+		parameters.mode = parameters.mode
+		parameters.tile_size = parameters.tile_size
+		parameters.tile_stride = parameters.tile_stride
+
+
 	def __call__(self, img_path):
 
 		# Recod.ai model preidiction
 		prob_recodai = self.activations_visualization(img_path)
+		print(colored("Probability of forgery (Model: Recod.ai): {:.2%}".format(prob_recodai), "yellow"))
 		#return prob
 
 		# TruFor prediction
+		print(colored("--- Using TruFor model ---", "green"))
 		img_RGB = np.array(Image.open(img_path).convert("RGB"))
+
 		rgb = torch.tensor(img_RGB.transpose(2, 0, 1), dtype=torch.float) / 256.0
 		rgb = torch.stack([rgb])
 
@@ -95,9 +110,9 @@ class forgery_detector():
 		conf = None
 
 		with torch.no_grad():
+
 			rgb = rgb.to(self.device)
 			pred, conf, det, npp = self.trufor_model(rgb)
-
 		if conf is not None:
 			conf = torch.squeeze(conf, 0)
 			conf = torch.sigmoid(conf)[0]
@@ -113,6 +128,8 @@ class forgery_detector():
 		pred = torch.squeeze(pred, 0)
 		pred = F.softmax(pred, dim=0)[1]
 		pred = pred.cpu().numpy()
+
+
 
 		#out_dict = dict()
 		#out_dict['map'] = pred
@@ -131,10 +148,40 @@ class forgery_detector():
 		cmap = plt.cm.gray
 		mapped_conf = cmap(norm(conf))
 		mapped_conf = (mapped_conf * 255).astype(np.uint8)
+		print(colored("Probability of forgery (Model: Trufor): {:.2%}".format(det_sig), "yellow"))
 
-		return prob_recodai, det_sig, mapped_pred, mapped_conf
+		#E2E model prediction
+		print(colored('--- Beginning E2E analysis---', "green"))
+		prob_e2e = self.process_image_e2e(img_path)
+		print(colored("E2E analysis successful.", "green"))
+		return prob_recodai, det_sig, prob_e2e, mapped_pred, mapped_conf
+	
 
+	def process_image_e2e(self, img_path):
+		print('Processing image: ', img_path)
+		score = np.nan
+		try:
+			X, RGB, NP, RGN, im_mode = loader(img_path, parameters.mode)
+		except Exception as e:
+			print("Error in opening image file: ", img_path)
+			print(e)
+			return score
 		
+		if np.min(X.shape[0:2]) < (parameters.tile_size + parameters.tile_stride):
+			print('Image is too small:' + img_path)
+		else:
+			try:
+				score = detection(X, RGB, NP, RGN, parameters.mode)
+				formatted_score = "{:.2%}".format(score[0])
+				print(colored("Probability of forgery (Model: E2E): " + formatted_score, "yellow"))
+				#print('> Score: {}'.format(score))
+				# Update Output
+				return formatted_score
+			except Exception as e:
+				print("Error in processing the image: ", img_path)
+				raise e
+		
+
 
 	def rename_keys(self, dict):
 
@@ -198,7 +245,6 @@ class forgery_detector():
 		prediction = self.model(img, XAI)
 		probs = torch.exp(prediction)/torch.exp(prediction).sum()
 
-		print(colored("Probability of forgery: {:.2%}".format(probs[0][1]), "yellow"))
 
 		# get the gradient of the output with respect to the parameters of the model
 		prediction[0][1].backward()
@@ -251,7 +297,6 @@ class forgery_detector():
 		# Convert from RGB to BGR if needed
 		#opencv_image = cv2.cvtColor(opencv_image, cv2.COLOR_RGB2BGR)
 		self.superimposed_img = opencv_image
-
 
 		return probs[0][1]
 
@@ -325,7 +370,9 @@ class ResNet18(Module):
     # method for the activation exctraction
 	def get_activations(self, x):
 		return self.features_conv(x)
-	
+
+
+
 
 #if __name__ == '__main__':
 #	main()

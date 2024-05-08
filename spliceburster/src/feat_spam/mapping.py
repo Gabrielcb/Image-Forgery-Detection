@@ -13,14 +13,14 @@
 import numpy as np
 
 def getIdemMapper(num):
-    return {'num': num,'numIn': num, 'table': np.asarray(range(num),dtype=np.int)}
+    return {'num': num,'numIn': num, 'table': np.asarray(range(num),dtype=int)}
 
 def getSignSymMapper(occo, n):
     #n = 2 * T + 1
     numIn  = n ** occo
     P = getCombinations(occo, n)
     V = np.ones([numIn, 1], dtype= np.bool)
-    table = np.zeros([numIn, 1], dtype= np.int)
+    table = np.zeros([numIn, 1], dtype= int)
     indexOut = 0
 
     for index in range(numIn):
@@ -48,7 +48,7 @@ def getSignMapper(occo, n):
     numOut = (numIn-1)/2 + 1
     P = getCombinations(occo, n)
     V = np.ones([numIn, 1], dtype= np.bool)
-    table = np.zeros([numIn, 1], dtype= np.int)
+    table = np.zeros([numIn, 1], dtype= int)
     indexOut = 0
 
     for index in range(numIn):
@@ -69,7 +69,7 @@ def getPos(P, n, occo):
 
 def getCombinations(occo, n):
     num = n ** occo
-    P = np.zeros([num, occo], dtype=np.int)
+    P = np.zeros([num, occo], dtype=int)
     P[0, :] = 0
     for indexI in range(1 ,num):
         P[indexI ,:] = P[indexI - 1 ,:]

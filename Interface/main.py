@@ -63,6 +63,15 @@ class MyFrame(wx.Frame):
         self.expert02_probability_text.SetForegroundColour(wx.Colour(255, 255, 255))
         self.text_sizer.Add(self.expert02_probability_text, flag=wx.LEFT|wx.RIGHT|wx.EXPAND, border=20)
 
+        self.expert03_probability_text = wx.StaticText(self.panel, label="")
+        self.expert03_probability_text.Show(False)
+        font = wx.Font(17, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+        self.expert03_probability_text.SetFont(font)
+        self.expert03_probability_text.SetForegroundColour(wx.Colour(255, 255, 255))
+        self.text_sizer.Add(self.expert03_probability_text, flag=wx.LEFT|wx.RIGHT|wx.EXPAND, border=20)
+
+
+
         self.my_sizer.Add(self.text_sizer, flag=wx.ALL | wx.CENTER, border=10)
 
         # Inserting buttons
@@ -94,14 +103,14 @@ class MyFrame(wx.Frame):
         self.my_sizer.Add(self.button_sizer, flag=wx.ALL | wx.CENTER, border=10)
 
         self.panel.SetSizer(self.my_sizer) 
-        self.SetTitle("Image Grid Example")
+        self.SetTitle("Recod.ai - Image Forgery Detection System")
         self.Center()       
         self.Show()
         
 
     def on_upload(self, event):
         
-        with wx.FileDialog(self, "Choose an image file", wildcard="Image files (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg",
+        with wx.FileDialog(self, "Choose an image file", wildcard="Image files (*.png;*.jpg;*.jpeg;*.heic);|*.png;*.jpg;*.jpeg;*.heic",
                            style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as file_dialog:
             if file_dialog.ShowModal() == wx.ID_CANCEL:
                 return
@@ -110,6 +119,7 @@ class MyFrame(wx.Frame):
             self.confidence_map_display.Show(False)
             self.expert01_probability_text.Show(False)
             self.expert02_probability_text.Show(False)
+            self.expert03_probability_text.Show(False)
 
             # Get the selected file path
             self.image_path = file_dialog.GetPath()
@@ -144,14 +154,20 @@ class MyFrame(wx.Frame):
         self.panel.Layout()
 
     def predict_forgery(self, event):
-        prob_recodai, prob, mapped_pred, mapped_conf = self.detector(self.image_path)
+        prob_recodai, prob, prob_e2e, mapped_pred, mapped_conf = self.detector(self.image_path)
 
-        self.expert01_probability_text.SetLabel("Prob. of Forgery for Expert #1: {:.2%}".format(prob_recodai))
+        self.expert01_probability_text.SetLabel("Prob. of Forgery for Expert #1 (Recod): {:.2%}".format(prob_recodai))
         self.expert01_probability_text.Show(True)
 
-        self.expert02_probability_text.SetLabel("Prob. of of Forgery for Expert #2: {:.2%}".format(prob))
+        self.expert02_probability_text.SetLabel("Prob. of Forgery for Expert #2 (TruFor): {:.2%}".format(prob))
         self.expert02_probability_text.Show(True)
 
+        if prob_e2e is None:
+            self.expert03_probability_text.SetLabel("Prob. of Forgery for Expert #3 (E2E): Image too small")
+        else:
+            self.expert03_probability_text.SetLabel("Prob. of Forgery for Expert #3 (E2E): {:.2}".format(prob_e2e) + "%")
+        self.expert03_probability_text.Show(True)
+        
         # Replace these paths with the paths to your image files
         #ela_image_opencv, superimposed_img = self.detector.get_ela_and_superposed()
         cv2.imwrite("Noise_image.png", cv2.cvtColor(mapped_conf, cv2.COLOR_RGB2BGR))

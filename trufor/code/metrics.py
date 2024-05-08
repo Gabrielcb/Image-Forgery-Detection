@@ -74,10 +74,10 @@ def computeMetrics_th(values, gt, gt0, gt1, th):
 
 
 def computeMCC(FP, TP, FN, TN):
-    FP = np.float64(FP)
-    TP = np.float64(TP)
-    FN = np.float64(FN)
-    TN = np.float64(TN)
+    FP = float64(FP)
+    TP = float64(TP)
+    FN = float64(FN)
+    TN = float64(TN)
     return np.abs(TP*TN - FP*FN) / np.maximum(np.sqrt((TP + FP)*(TP + FN)*(TN + FP)*(TN + FN) ), 1e-32)
 
 
@@ -118,7 +118,7 @@ def computeDetectionMetrics(scores, labels):
     lbl = np.array(labels)
     lbl = lbl[np.isfinite(scores)]
     
-    scores = np.array(scores, dtype='float32')
+    scores = np.array(scores, dtype='np.float32')
     scores[scores==np.PINF]  = np.nanmax(scores[scores<np.PINF])
     scores = scores[np.isfinite(scores)]
     assert lbl.shape == scores.shape

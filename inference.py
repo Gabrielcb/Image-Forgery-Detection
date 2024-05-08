@@ -88,7 +88,7 @@ def activations_visualization(val_sampler, img_path, img_idx, gpu_indexes):
 
 	prediction = model(img, XAI)
 
-	print(colored("Probability of forgery: {:.2%}".format(prediction[0][0]), "yellow"))
+	#print(colored("Probability of forgery: {:.2%}".format(prediction[0][0]), "yellow"))
 
 	# get the gradient of the output with respect to the parameters of the model
 	prediction[0].backward()
@@ -136,6 +136,8 @@ def activations_visualization(val_sampler, img_path, img_idx, gpu_indexes):
 	else:
 		vis = np.concatenate((img, superimposed_img, ela_image_opencv), axis=1)
 		cv2.imwrite('map_%d.jpg' % img_idx, vis)
+
+	print("END")
 
 
 

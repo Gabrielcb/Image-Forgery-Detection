@@ -1,0 +1,5 @@
+mode: FUSION
+tile_size: 256
+tile_stride: 192
+train_dataset: 'E2E'
+test_dataset: './test/'
