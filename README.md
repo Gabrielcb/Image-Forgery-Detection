@@ -1,3 +1,13 @@
+# Graphical interface
+
+The easiest way to use this tool is throught the graphical interface, by launching the main.py script located in the "Interface" folder.
+
+Simply upload the image, and it will give you the different probabilities of forgeries given by the implemented models (TruFor, E2E, and Recod.ai).
+
+Note that by default, the E2E model won't be able to manage images that are less than 448px on one side.
+Also, on some devices, the TruFor model takes a long time to process, and may never succeed.
+
+# Terminal
 ## Launching the code
 
 This code has been tested under python 3.7.
